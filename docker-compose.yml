@@ -1,0 +1,26 @@
+services:
+  modernuo:
+    build:
+      context: .
+      args:
+        # Pin a release tag for reproducible rebuilds. "main" tracks the tip and
+        # will quietly change what you get between two builds of the same file.
+        MODERNUO_REF: ${MODERNUO_REF:-main}
+    image: modernuo:${MODERNUO_REF:-main}
+    container_name: modernuo
+    restart: unless-stopped
+    ports:
+      - "2593:2593/tcp"
+    volumes:
+      # World saves and accounts. Back this up; it is the shard.
+      - ./data:/app/Saves
+      # Server configuration ModernUO writes and reads.
+      - ./config:/app/Configuration
+      # UO CLIENT DATA — read-only, and supplied by YOU. See the README: these
+      # files belong to Electronic Arts and are deliberately not in the image.
+      - ./uodata:/uodata:ro
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: "3" }

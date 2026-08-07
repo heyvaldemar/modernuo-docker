@@ -1,0 +1,6 @@
+# Your shard: world saves, accounts, and the configuration ModernUO rewrites.
+/data/
+/config/
+# UO client files. Yours, from your own installation — never redistributed here.
+/uodata/
+.env
