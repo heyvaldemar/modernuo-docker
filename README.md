@@ -67,6 +67,103 @@ Both symlinks are already in the Dockerfile. Neither is needed on distributions 
 
 ---
 
+## Populating a fresh world
+
+**A new world is empty, and that is not a bug.** ModernUO creates the world but does not decorate or populate it. On a first boot the server reports:
+
+```
+Loading world done (46 items, 2 mobiles)
+```
+
+A generated world is closer to 170,000 items and 29,000 mobiles. Until you generate it there are no vendors, no signs, no doors, no dungeon spawns — only bare terrain, which looks convincingly like a working shard right up until you walk into Britain and find nobody there.
+
+Generation is a one-time manual step, run in game, and the data for it already ships in `Data/`.
+
+### Every command needs a staff character — and staff status is decided at character creation
+
+This is the part that costs an evening. Raising an account's access level does **not** promote a character that already exists. From `CharacterCreation.cs`:
+
+```csharp
+newChar.AccessLevel = args.Account.AccessLevel;
+```
+
+The level is copied once, when the character is made. A character created before the account was promoted stays a `Player` forever, the command system does not even recognise its input as a command, and nothing is written to `Logs/Commands/` — so it looks exactly like the commands are broken.
+
+**Create a new character after the account is an Owner.** A staff character starts outside the normal towns, which is a quick way to confirm the level took effect.
+
+### The commands
+
+All of these require `AccessLevel.Developer` or higher. The command prefix is `[` by default.
+
+```
+[Decorate       world decoration: furniture, lighting, signs' backing, town dressing
+[SignGen        world and shop signs on all facets
+[MoonGen        public moongates (removes old ones first)
+[TelGen         world and dungeon teleporters
+[SHTelGen       solen hive teleporters
+[DoorGen        doors, by analysing the map — the slow one
+[ImportSpawners <pattern>   creatures and vendors
+[Save
+```
+
+Optional, depending on what you want present: `[GenChamps`, `[GenKhaldun`, `[GenStealArties`, `[SecretLocGen`.
+
+**Command names do not always match the method names** you may find by searching the assembly. The registered names are what matters: it is `TelGen`, not `GenTeleporter`; `GenChamps`, not `ChampGen`; `GenLeverPuzzle`, not `GenLampPuzzle`.
+
+`[Decorate` is safe to re-run. It calls `FindItem` for each piece and skips anything already standing there, so running it again after enabling a new facet adds only the new content.
+
+### `ImportSpawners` needs an argument, and globs are fragile
+
+`[ImportSpawners` (aliases `GenerateSpawners`, `GenSpawners`) takes a search pattern relative to the server's base directory. With no argument it prints usage and does nothing:
+
+```
+[GenerateSpawners Data/Spawns/shared/**/*.json
+```
+
+The spawn sets are split by era. `shared/` holds the bulk — dungeons, town life, vendors, wildlife — and applies to any era. `uoml/` and `post-uoml/` are **alternative** versions of the same handful of files for later eras, not additions to `shared/`; importing them on top duplicates spawn points or imports content from an era your shard does not have.
+
+Typing a pattern into a game client is more error-prone than it looks. `shared/**/*.json` arriving at the server as `shared/*/.json` matches nothing, and the only symptom is a quiet "No files found matching the pattern". If a glob refuses to work, merge the files and pass a plain path — the spawn files are JSON arrays of objects with unique `guid`s, so concatenating them is safe:
+
+```bash
+python3 - <<'EOF'
+import json, glob
+FACETS = ("felucca", "trammel", "ilshenar")   # only what your expansion enables
+out, seen = [], set()
+for facet in FACETS:
+    for f in sorted(glob.glob(f"Data/Spawns/shared/{facet}/*.json")):
+        for s in json.load(open(f)):
+            if s["guid"] not in seen:
+                seen.add(s["guid"]); out.append(s)
+json.dump(out, open("Data/Spawns/all.json", "w"), indent=1)
+print(len(out), "spawners")
+EOF
+```
+
+Then `[GenerateSpawners Data/Spawns/all.json`, with no special characters to lose.
+
+Name only the facets your expansion actually has. `shared/` also carries `malas/` and `tokuno/`, and importing those into a shard where the map is not enabled just produces failures the importer has to report.
+
+### Checking that it worked
+
+Walking around proves one screen at a time. `tools/world-stats.sh` reads the save index and answers in a second:
+
+```
+$ tools/world-stats.sh
+  items     168966   (788 distinct types)
+  mobiles    29025   (367 distinct types)
+
+  spawner types present: Spawner, RegionSpawner
+  townsfolk/vendor types: 27 — Alchemist, Baker, Banker, Barkeeper, Butcher...
+
+  VERDICT: decorated and inhabited.
+```
+
+It distinguishes the two states that are easy to confuse: a world can be fully decorated and still have nobody living in it. Counts update when the server saves, so run `[Save` first if you have just generated something.
+
+### What not to run
+
+Generators exist for content your expansion may not include. Check `Configuration/expansion.json` first — on a pre-AoS shard, `[GenGauntlet` and `[GenLeverPuzzle` (Doom) and `[DecorateMag` (ruined Magincia) belong to later eras. `[Decorate` itself is expansion-aware and simply skips facets that are not enabled.
+
 ## Keeping up with releases
 
 `uowatch/` is a small watcher that polls the ModernUO release feed and reports when upstream is ahead of what you built.
