@@ -4,3 +4,6 @@
 # UO client files. Yours, from your own installation — never redistributed here.
 /uodata/
 .env
+
+# Passwords written by tools/set-password.sh
+secrets/

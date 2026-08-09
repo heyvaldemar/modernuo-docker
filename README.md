@@ -164,6 +164,83 @@ It distinguishes the two states that are easy to confuse: a world can be fully d
 
 Generators exist for content your expansion may not include. Check `Configuration/expansion.json` first — on a pre-AoS shard, `[GenGauntlet` and `[GenLeverPuzzle` (Doom) and `[DecorateMag` (ruined Magincia) belong to later eras. `[Decorate` itself is expansion-aware and simply skips facets that are not enabled.
 
+## Operating it
+
+Four things that are not obvious until they cost you something.
+
+### The world is not saved on shutdown
+
+Stopping the container does **not** save. Measured on a running shard: 639 completed saves before `docker compose stop`, 639 after. Everything that changed since the last autosave is discarded — accounts, characters, items, the lot.
+
+This is easy to miss because the failure is silent and delayed. A password changed in game, a character created, an item moved: restart within the autosave window and it never happened, with nothing in any log to say so.
+
+The autosave interval is the only thing standing between a restart and lost work:
+
+```json
+"autosave.saveDelay": "00:01:00"
+```
+
+The shipped default is five minutes. On a small world a save takes 0.02–0.07 seconds, so shortening it costs nothing measurable and shrinks the window fivefold. Check that it is actually running before trusting it:
+
+```bash
+docker logs uo --since 5m 2>&1 | grep -ac 'Saving world done'
+```
+
+There is a console command to force a save, but it needs an interactive TTY — see below for why giving the container one is a bad trade.
+
+### Do not give the container a TTY
+
+`tty: true` makes ModernUO colourise its output, and the escape codes land **between the fields of every log line**:
+
+```
+Login: <esc>[36m1.2.3.4<esc>[37m Invalid password for 'someone'
+```
+
+Anything that reads those logs — a fail2ban filter, an alerting script, a grep in a cron job — expects a plain space there and silently matches nothing. A monitor that quietly stops matching is worse than no monitor: it reports healthy while seeing nothing.
+
+The only thing a TTY buys is the interactive console, whose useful command is `save`. Shortening the autosave interval achieves the same end without breaking every log consumer.
+
+### `[Password` refuses for anyone whose address has changed
+
+The in-game password command is gated on the account's **first ever** recorded address, from `AccountHandler.cs`:
+
+```csharp
+if (accessList[0].MatchClassC(ipAddress))
+{
+    acct.SetPassword(pass);
+}
+else
+{
+    // files a support page instead
+}
+```
+
+A residential connection gets a new address every so often. Once it does, every account older than that change is permanently unable to use the command — the check compares against the *first* address, not the most recent one.
+
+Worse, look at what the fallback writes:
+
+```csharp
+$"[Automated: Change Password]<br>Desired password: {pass}<br>..."
+```
+
+The desired password goes into the support ticket **in clear text**, readable by anyone who opens the queue with `[Pages`.
+
+`tools/set-password.sh` exists for this. It replaces the stored Argon2 string directly, with the server stopped, and verifies the result by performing a real login rather than assuming the edit worked. The hash length is fixed by its parameters — 95 characters for `m=8192,t=3,p=1` with a 16-byte salt — so the replacement is byte-for-byte and nothing in the file moves.
+
+```bash
+tools/set-password.sh myaccount
+```
+
+The new password is written to a mode-600 file, never printed.
+
+### Two people in one household cannot both play
+
+```json
+"accountHandler.maxAccountsPerIP": "1"
+```
+
+That is the default, and it counts addresses, not people. Two players behind one router see the second registration refused. Raise it to whatever your household or friend group needs.
+
 ## Keeping up with releases
 
 `uowatch/` is a small watcher that polls the ModernUO release feed and reports when upstream is ahead of what you built.
