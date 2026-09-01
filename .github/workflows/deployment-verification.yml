@@ -1,0 +1,134 @@
+name: Deployment Verification
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Weekly rebuild to catch upstream drift.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: deployment-verification-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Authenticated requests avoid the anonymous API rate limit that shared
+  # GitHub runners regularly hit (api.github.com answers 403 otherwise).
+  GH_API_TOKEN: ${{ github.token }}
+
+jobs:
+  lint:
+    name: Lint shell scripts, Dockerfile, python, and workflow YAML
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: ShellCheck
+        run: |
+          docker run --rm -v "$PWD:/mnt" -w /mnt \
+            koalaman/shellcheck-alpine:stable \
+            shellcheck tools/set-password.sh tools/world-stats.sh
+
+      - name: hadolint (Dockerfile linting)
+        run: |
+          docker run --rm -i -v "$PWD/.hadolint.yaml:/.hadolint.yaml:ro" hadolint/hadolint < Dockerfile
+
+      - name: Compile-check the python tools
+        run: |
+          python3 -m py_compile tools/sethash.py uowatch/watch.py
+
+      - name: actionlint (GitHub Actions workflow linting)
+        run: |
+          docker run --rm -v "$PWD:/mnt" -w /mnt \
+            rhysd/actionlint:1.7.12 \
+            -color
+
+  check-source-freshness:
+    name: Check the pinned ModernUO release for upstream drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Weekly cron + manual dispatch only — the pinned MODERNUO_REF in
+    # .env.example is the tested release; this job is the bump signal
+    # (uowatch does the same job for a running deployment).
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compare MODERNUO_REF against the latest upstream release
+        run: |
+          pinned="$(grep -oE '^MODERNUO_REF=.+' .env.example | cut -d= -f2)"
+          latest="$(curl -fsSL --retry 3 -H "Authorization: Bearer $GH_API_TOKEN" https://api.github.com/repos/modernuo/ModernUO/releases/latest | jq -r .tag_name)"
+          latest="${latest#v}"
+          if [ -z "$latest" ] || [ "$latest" = "null" ]; then
+            echo "::error::Could not determine the latest ModernUO release"
+            exit 1
+          fi
+          if [ "$pinned" != "$latest" ]; then
+            echo "::error::MODERNUO_REF is behind: pinned ${pinned}, latest release is ${latest}"
+            exit 1
+          fi
+          echo "MODERNUO_REF ${pinned} matches the latest release"
+
+  build-and-test:
+    name: Build the image + runtime smoke
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Generate test .env
+        run: cp .env.example .env
+
+      - name: Build the ModernUO image from the pinned release
+        run: docker compose build
+
+      - name: Boot the server binary and verify the runtime dependencies
+        # The UO client art/map files are proprietary and deliberately not
+        # in this repository, so a full shard cannot boot in CI. What CAN
+        # be proven: the published binary starts under the runtime image
+        # and gets past Core.Setup — exactly the stage that dies with
+        # "Could not load libdeflate" when the native-library fix is
+        # missing — and stops only at the missing client data.
+        run: |
+          mkdir -p data config uodata
+          docker compose up -d
+          sleep 30
+          docker compose logs > boot.log 2>&1
+          cat boot.log | tail -20
+          if grep -qiE "could not load|DllNotFoundException" boot.log; then
+            echo "::error::Native runtime dependency failed to load"
+            exit 1
+          fi
+          if ! grep -qiE "ModernUO|Core:" boot.log; then
+            echo "::error::The server binary produced no recognizable startup output"
+            exit 1
+          fi
+          echo "Server binary starts and reaches the client-data stage"
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Shutdown Docker Compose services
+        if: always()
+        run: docker compose down

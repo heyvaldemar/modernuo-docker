@@ -1,0 +1,5 @@
+ignored:
+  # Debian package pins churn with every base-image bump and add no
+  # reproducibility here: the dotnet base images are Microsoft-managed
+  # and the final artifact is pinned by MODERNUO_REF.
+  - DL3008
