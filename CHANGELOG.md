@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Added
+
+- **A Trivy scan of the image this repository builds.** There is no upstream
+  image to pin a digest to — the shard is compiled here — so the scan builds
+  what the repository actually ships and looks at that, rather than at somebody
+  else's work.
 
 ## [1.2.0] - 2026-09-05
 
