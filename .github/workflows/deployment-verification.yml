@@ -84,6 +84,30 @@ jobs:
           fi
           echo "MODERNUO_REF ${pinned} matches the latest release"
 
+  healthcheck:
+    name: The health check can go red, and green
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: ShellCheck
+        run: |
+          docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 tests/e2e-healthcheck.sh
+
+      - name: Four assertions against the runtime base image
+        # ModernUO is .NET, so the only comm in the container is dotnet and a
+        # /proc/*/comm check can never match. The pattern therefore reads the
+        # command line - where, unbracketed, it matches the shell carrying the
+        # check and is green on a container with nothing running at all. Both
+        # halves are measured here rather than asserted in a comment.
+        run: |
+          chmod +x tests/e2e-healthcheck.sh
+          ./tests/e2e-healthcheck.sh
+
   build-and-test:
     name: Build the image + runtime smoke
     runs-on: ubuntu-latest

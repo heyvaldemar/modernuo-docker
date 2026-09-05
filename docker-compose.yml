@@ -1,16 +1,26 @@
+# Image pin lives HERE, as an interpolation default, so `git pull` delivers the
+# release this repository has tested. The image is built from this checkout, so
+# the tag names what `build:` produces and MODERNUO_REF names the upstream
+# revision it is built from; the two are kept equal on purpose, so a container
+# tells you which shard code it is running.
+#
+# 0.15.6.145 rather than `main`. The Dockerfile's own comment warns that main
+# quietly changes what you get between two builds of the same file, and a
+# default of `main` was that warning shipped as a setting.
+x-images:
+  modernuo: &modernuo-image modernuo:${MODERNUO_REF:-0.15.6.145}
+
 services:
   modernuo:
     build:
       context: .
       args:
-        # Pin a release tag for reproducible rebuilds. "main" tracks the tip and
-        # will quietly change what you get between two builds of the same file.
-        MODERNUO_REF: ${MODERNUO_REF:-main}
-    image: modernuo:${MODERNUO_REF:-main}
+        MODERNUO_REF: ${MODERNUO_REF:-0.15.6.145}
+    image: *modernuo-image
     container_name: modernuo
     restart: unless-stopped
     ports:
-      - "2593:2593/tcp"
+      - "${MODERNUO_PORT:-2593}:2593/tcp"
     volumes:
       # World saves and accounts. Back this up; it is the shard.
       - ./data:/app/Saves
@@ -21,6 +31,53 @@ services:
       - ./uodata:/uodata:ro
     security_opt:
       - no-new-privileges:true
+    # Resource limits as .env-overridable defaults (e.g. MODERNUO_MEMORY_LIMIT=16g);
+    # the override survives every git pull.
+    #
+    # The number matters more here than in most places: .NET's garbage
+    # collector expands to fill whatever it is offered, so the ceiling is what
+    # tells it when to stop rather than a line it is unlikely to reach. A shard
+    # measured over months peaked at 8.7 GB with 4.4 GB resident under a 12 GB
+    # limit. 4 GB is a starting point for a small one — watch it, and raise it
+    # rather than letting the collector fight the limit.
+    deploy:
+      resources:
+        limits:
+          memory: ${MODERNUO_MEMORY_LIMIT:-4g}
+          cpus: "${MODERNUO_CPU_LIMIT:-2.0}"
+        reservations:
+          memory: ${MODERNUO_MEMORY_RESERVATION:-512m}
+          cpus: "${MODERNUO_CPU_RESERVATION:-0.5}"
+    healthcheck:
+      # THE OBVIOUS CHECK NEVER MATCHES. ModernUO is a .NET application, so the
+      # only `comm` in this container is `dotnet`: a check for `ModernUO` in
+      # /proc/*/comm returns 1 every single time. Measured on a running shard,
+      # not assumed — an earlier version of this rested entirely on a fallback
+      # while its first branch had never once fired.
+      #
+      # The bracket is load-bearing. `pgrep -f ModernUO` also matches the
+      # command line of the shell running the check, so it is satisfied by
+      # itself and can never go red. `[M]odernUO` is the same pattern and does
+      # not match its own text.
+      test: ["CMD-SHELL", "pgrep -f '[M]odernUO' >/dev/null"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: ${MODERNUO_START_PERIOD:-3m}
+    # MODERNUO DOES NOT SAVE ON SHUTDOWN. Measured: 639 saves before a stop and
+    # 639 after, so a restart discards everything newer than the last autosave.
+    # The grace period does not fix that — only a short autosave interval does,
+    # which is set in Configuration. It is here so an in-flight save is allowed
+    # to finish rather than being cut in half by SIGKILL.
+    stop_grace_period: ${MODERNUO_STOP_GRACE_PERIOD:-60s}
+    # NO TTY, DELIBERATELY. A TTY switches ModernUO to coloured output, and the
+    # escape codes land between the fields of every log line. Anything reading
+    # these logs — a fail2ban filter, a login-attempt watcher, your own grep —
+    # then silently matches nothing, which is a worse trade than a plain
+    # console is worth.
+    tty: false
     logging:
       driver: json-file
-      options: { max-size: 10m, max-file: "3" }
+      options:
+        max-size: ${MODERNUO_LOG_MAX_SIZE:-10m}
+        max-file: "${MODERNUO_LOG_MAX_FILE:-3}"
