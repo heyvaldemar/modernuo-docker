@@ -7,21 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.3.0] - 2026-09-07
+
 ### Added
 
+- **`update.sh`: move between release tags on purpose.** It updates to the latest release (a combination this repository's CI has booted and smoke-tested), refuses to cross a major version unattended, refuses to run over local changes, and names any new required variable before anything has moved. `--dry-run` says what would happen.
 - **A Trivy scan of the image this repository builds.** There is no upstream
   image to pin a digest to — the shard is compiled here — so the scan builds
   what the repository actually ships and looks at that, rather than at somebody
   else's work.
 
-## [1.2.0] - 2026-09-05
-
-### Fixed
-
-- **The health check could not go red.** `pgrep -f ModernUO` matches the command
-  line of the shell running it, so it is satisfied by its own text and returns
-  success on a container with nothing running at all. Measured against the
-  runtime base image: unbracketed it is green on an empty container, bracketed
+ner, bracketed
   it is red. `[M]odernUO` is the same pattern and does not match itself.
 - **And the obvious alternative could never go green.** ModernUO is a .NET
   application, so the only `comm` in the container is `dotnet`: a check for
@@ -64,7 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/heyvaldemar/modernuo-docker/releases/tag/v1.0.0
