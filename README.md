@@ -1,8 +1,9 @@
 # modernuo-docker
 
-Multi-stage Docker build for [ModernUO](https://github.com/modernuo/ModernUO), the Ultima Online shard emulator on .NET 10. Compose stack, upstream release watcher, and no game data baked into the image.
+[![Deployment Verification](https://github.com/heyvaldemar/modernuo-docker/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/modernuo-docker/actions/workflows/deployment-verification.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
+Multi-stage Docker build for [ModernUO](https://github.com/modernuo/ModernUO), the Ultima Online shard emulator on .NET 10. Compose stack, upstream release watcher, and no game data baked into the image.
 
 ## Why this exists
 
@@ -270,3 +271,15 @@ Copy them into `uodata/`. The compose file mounts that directory read-only, so t
 ## Licence
 
 The contents of this repository are MIT-licensed. ModernUO itself remains GPL-3.0 and is not covered by that grant.
+
+---
+
+## About the maintainer
+
+<div align="center">
+
+**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** · Docker Captain · IBM Champion · AWS Community Builder
+
+[YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1) · [Blog](https://heyvaldemar.com) · [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)
+
+</div>
