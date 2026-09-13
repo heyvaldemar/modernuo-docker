@@ -4,18 +4,18 @@
 # revision it is built from; the two are kept equal on purpose, so a container
 # tells you which shard code it is running.
 #
-# 0.15.6.145 rather than `main`. The Dockerfile's own comment warns that main
+# 0.15.6.178 rather than `main`. The Dockerfile's own comment warns that main
 # quietly changes what you get between two builds of the same file, and a
 # default of `main` was that warning shipped as a setting.
 x-images:
-  modernuo: &modernuo-image modernuo:${MODERNUO_REF:-0.15.6.145}
+  modernuo: &modernuo-image modernuo:${MODERNUO_REF:-0.15.6.178}
 
 services:
   modernuo:
     build:
       context: .
       args:
-        MODERNUO_REF: ${MODERNUO_REF:-0.15.6.145}
+        MODERNUO_REF: ${MODERNUO_REF:-0.15.6.178}
     image: *modernuo-image
     container_name: modernuo
     restart: unless-stopped
