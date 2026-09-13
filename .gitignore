@@ -7,3 +7,7 @@
 
 # Passwords written by tools/set-password.sh
 secrets/
+
+# Python bytecode from tools/
+__pycache__/
+*.pyc
