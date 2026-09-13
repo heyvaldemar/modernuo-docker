@@ -26,7 +26,7 @@ Copy your Ultima Online client files into `uodata/` (see [Game data](#game-data)
 docker compose up -d --build
 ```
 
-The shard listens on TCP 2593. First start creates the world; subsequent starts load it from `data/`.
+The shard listens on TCP 2593. First start creates the world; subsequent starts load it from `data/Saves/`.
 
 To upgrade, change `MODERNUO_REF` in `.env` and rebuild:
 
@@ -188,6 +188,28 @@ docker logs uo --since 5m 2>&1 | grep -ac 'Saving world done'
 ```
 
 There is a console command to force a save, but it needs an interactive TTY: see below for why giving the container one is a bad trade.
+
+### The save directory is not the mount point
+
+ModernUO 0.15.6.178 publishes every world save by renaming: it writes `Saves.next`, sets `Saves` aside as `Saves.previous-<stamp>`, then renames the staged directory into place. The release notes call it staged publication, and it exists so a crash mid-save cannot leave a partial world behind.
+
+A bind mount cannot be renamed. Mount `./data` at `/app/Saves` and this is what happens, measured on a live shard forty seconds after the upgrade: the set-aside falls back to moving the contents out file by file, which empties `./data` on the host, and the rename into place fails because the mount point still exists. Every save fails from then on, once a minute. The only complete copy of the world sits in `/app/Saves.next` inside the container's writable layer, which the next `docker compose up` throws away. The container stays healthy, the port stays open, the player count stays normal. Nothing on the host says a word.
+
+So the mount is the parent, `./data:/app/World`, and `world.savePath` is `World/Saves`. Your world lives at `./data/Saves/`. An `init` service runs before the shard on every start: it moves a world found at the root of `./data` into `Saves/`, points the configuration there, refuses if both layouts hold a world, and changes nothing on a second run.
+
+**If you ran 1.3.1 on the old layout**, check the running container before you pull:
+
+```bash
+docker exec modernuo test -d /app/Saves.next && echo "a staged save is stranded in the container"
+```
+
+If it prints, and `./data` holds no world, copy it out before anything is recreated. `./update.sh` does this itself; by hand it is:
+
+```bash
+mkdir -p data/Saves && docker cp modernuo:/app/Saves.next/. data/Saves/
+```
+
+The health check now asks two questions rather than one: is the process up, and has it written its world to disk inside `MODERNUO_SAVE_MAX_AGE` minutes. The second is the one that catches a full disk, a wrong permission, a broken mount, or the next upstream rearrangement, none of which a process check can see.
 
 ### Do not give the container a TTY
 

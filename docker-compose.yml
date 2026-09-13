@@ -9,8 +9,44 @@
 # default of `main` was that warning shipped as a setting.
 x-images:
   modernuo: &modernuo-image modernuo:${MODERNUO_REF:-0.15.6.178}
+  init: &init-image ${MODERNUO_INIT_IMAGE_TAG:-alpine:${MODERNUO_INIT_IMAGE_VERSION:-3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce}}
 
 services:
+  init:
+    # Runs before the shard on every start and puts the save where a rename
+    # can reach it. See tools/init-save-layout.sh for the failure it prevents:
+    # a bind mount cannot be renamed, and ModernUO 0.15.6.178 publishes every
+    # save by renaming. A deployment on the old layout has its world moved into
+    # ./data/Saves/ and its configuration pointed there, once, and refused if
+    # the two layouts both hold a world.
+    image: *init-image
+    security_opt:
+      - no-new-privileges:true
+    # CHOWN, DAC_OVERRIDE and FOWNER: the host directories belong to whoever ran
+    # git clone, and a root that has dropped DAC_OVERRIDE cannot write into a
+    # directory it does not own. Measured on a real host, not on Docker Desktop,
+    # which virtualises ownership and hides exactly this.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    deploy:
+      resources:
+        limits:
+          memory: ${MODERNUO_INIT_MEMORY_LIMIT:-64m}
+          cpus: "${MODERNUO_INIT_CPU_LIMIT:-0.5}"
+        reservations:
+          memory: ${MODERNUO_INIT_MEMORY_RESERVATION:-8m}
+          cpus: "${MODERNUO_INIT_CPU_RESERVATION:-0.1}"
+    volumes:
+      - ./data:/world
+      - ./config:/configuration
+      - ./tools/init-save-layout.sh:/init.sh:ro
+    command: ["sh", "/init.sh"]
+    restart: "no"
+
   modernuo:
     build:
       context: .
@@ -21,9 +57,24 @@ services:
     restart: unless-stopped
     ports:
       - "${MODERNUO_PORT:-2593}:2593/tcp"
+    depends_on:
+      init:
+        condition: service_completed_successfully
     volumes:
       # World saves and accounts. Back this up; it is the shard.
-      - ./data:/app/Saves
+      #
+      # NOT ./data:/app/Saves. THE SAVE DIRECTORY MUST NOT BE THE MOUNT POINT.
+      # ModernUO 0.15.6.178 publishes a save by renaming: it writes
+      # <savePath>.next, sets <savePath> aside, then renames the staged one
+      # into place. A mount point cannot be renamed, so the set-aside empties
+      # the host directory file by file and the rename into place fails, once
+      # a minute, with the only complete world left inside the container's
+      # writable layer. The mount is the PARENT, world.savePath is World/Saves
+      # (set by the init service above), and Saves, Saves.next and
+      # Saves.previous-* are ordinary directories inside it. Your world lives
+      # at ./data/Saves/.
+      - ./data:/app/World
+      - ./tools/healthcheck.sh:/healthcheck.sh:ro
       # Server configuration ModernUO writes and reads.
       - ./config:/app/Configuration
       # UO CLIENT DATA — read-only, and supplied by YOU. See the README: these
@@ -48,18 +99,25 @@ services:
         reservations:
           memory: ${MODERNUO_MEMORY_RESERVATION:-512m}
           cpus: "${MODERNUO_CPU_RESERVATION:-0.5}"
+    environment:
+      # How long the shard may go without writing its world to disk before the
+      # health check calls it unhealthy, in minutes. ModernUO's shipped autosave
+      # interval is five minutes, so twenty is four missed saves: well past a
+      # slow save or a restart, nowhere near a false alarm. Shorten it if you
+      # shortened autosave.saveDelay.
+      MODERNUO_SAVE_MAX_AGE: ${MODERNUO_SAVE_MAX_AGE:-20}
     healthcheck:
-      # THE OBVIOUS CHECK NEVER MATCHES. ModernUO is a .NET application, so the
-      # only `comm` in this container is `dotnet`: a check for `ModernUO` in
-      # /proc/*/comm returns 1 every single time. Measured on a running shard,
-      # not assumed — an earlier version of this rested entirely on a fallback
-      # while its first branch had never once fired.
+      # TWO QUESTIONS, in tools/healthcheck.sh: is the process up, and has it
+      # written its world down recently. The first alone is what every shard
+      # ships with, and it is satisfied by a server that lost the ability to
+      # save six minutes ago. The script is the same file the test suite runs
+      # against fake state, so what CI proves is what production checks.
       #
-      # The bracket is load-bearing. `pgrep -f ModernUO` also matches the
-      # command line of the shell running the check, so it is satisfied by
-      # itself and can never go red. `[M]odernUO` is the same pattern and does
-      # not match its own text.
-      test: ["CMD-SHELL", "pgrep -f '[M]odernUO' >/dev/null"]
+      # On the process half: ModernUO is .NET, so the only comm in this
+      # container is dotnet, and a check for ModernUO in /proc/*/comm returns 1
+      # every time. The bracket in [M]odernUO keeps pgrep -f from matching the
+      # shell that carries the check, which would make it green forever.
+      test: ["CMD", "sh", "/healthcheck.sh"]
       interval: 60s
       timeout: 10s
       retries: 3

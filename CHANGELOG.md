@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
+## [1.3.2] - 2026-09-13
+
+### Fixed
+
+- **On 1.3.1, every world save failed.** ModernUO 0.15.6.178 publishes a save
+  by renaming: it writes `Saves.next`, sets `Saves` aside, then renames the
+  staged directory into place. This template mounted `./data` at `/app/Saves`,
+  and a mount point cannot be renamed. Measured on a live shard forty seconds
+  after the upgrade: the set-aside fell back to moving the contents out file by
+  file, which emptied the host directory, and the rename into place failed
+  because the mount point still existed. Every save failed from then on, once
+  a minute, with the only complete copy of the world inside the container's
+  writable layer, which the next recreate discards. The container stayed
+  healthy, the port stayed open, the player count stayed normal.
+
+  The mount is now the parent, `./data:/app/World`, and `world.savePath` is
+  `World/Saves`. A new `init` service runs before the shard on every start: it
+  moves a world found at the root of `./data` into `Saves/`, rewrites
+  `world.savePath` in `config/modernuo.json`, writes a minimal configuration on
+  a fresh deployment, refuses if both layouts hold a world, and changes nothing
+  on a second run. `update.sh` copies a save stranded in the running container
+  out to `data/Saves/` before recreating anything.
+
+  The mechanism is proven in CI without a shard: a mount point cannot be
+  renamed and a directory inside one can. So are the init step on every
+  layout it may meet, the health check against fake state, and the index
+  reader below. Nineteen assertions, negative cases included.
+
+- **The health check could not see a shard that had stopped saving.** It
+  checked for the process, and a server that cannot write its world down looks
+  exactly like one that can. `tools/healthcheck.sh` now also requires the save
+  on disk to be newer than `MODERNUO_SAVE_MAX_AGE` minutes, twenty by default,
+  which is four missed saves at the shipped interval. The same file is what the
+  test suite runs, so what CI proves is what production checks.
+
+- **`tools/world-stats.sh` misread the save index and hardcoded its path.** The
+  index gained an 8-byte field at version 5; reading the type count at the old
+  offset produced 148836781 items and no types for a world of 174 thousand.
+  Unknown versions are refused rather than guessed, and the path comes from
+  `world.savePath` in the configuration, the same place the server reads it.
+
+- The freshness check compared `MODERNUO_REF` with `!=` and would have called
+  a newer pin behind. It orders the two versions now, as the rest of the fleet
+  does. The init image's digest is re-resolved daily and scanned with Trivy
+  like every other pinned image.
+
 ## [1.3.1] - 2026-09-13
 
 ### Changed
@@ -74,7 +120,8 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/heyvaldemar/modernuo-docker/releases/tag/v1.3.2
 [1.3.1]: https://github.com/heyvaldemar/modernuo-docker/releases/tag/v1.3.1
 [1.3.0]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.1.0...v1.2.0

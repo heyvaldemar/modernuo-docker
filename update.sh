@@ -87,6 +87,32 @@ if [ "$DRY_RUN" = "true" ]; then
   exit 0
 fi
 
+# A WORLD STRANDED INSIDE THE OLD CONTAINER IS COPIED OUT BEFORE ANYTHING IS
+# RECREATED. Releases 1.3.1 and earlier mounted ./data at /app/Saves, which is
+# the directory ModernUO 0.15.6.178 renames on every save. On that layout every
+# save after the upgrade failed, the host directory was emptied by the first
+# attempt, and the only complete copy of the world sits in /app/Saves.next in
+# the running container's writable layer. `docker compose up` recreates the
+# container and that layer is gone. So: if the running shard holds a staged
+# save and the host holds no world at all, the staged one is copied out first.
+rescue_staged_save() {
+  local c staged
+  c="$(docker compose -f "$COMPOSE_FILE" -p "$PROJECT" ps -q modernuo 2>/dev/null | head -n 1)"
+  [ -n "$c" ] || return 0
+  docker exec "$c" test -d /app/Saves.next 2>/dev/null || return 0
+  if [ -f data/Saves/Items/Items.bin ] || [ -f data/Items/Items.bin ]; then
+    echo "the running shard holds a staged save at /app/Saves.next, but the host already has a world; leaving both alone" >&2
+    return 0
+  fi
+  staged="data/rescued-$(date +%Y%m%d-%H%M%S)"
+  echo "RESCUING a world that exists only inside the running container: /app/Saves.next -> $staged" >&2
+  docker cp "$c:/app/Saves.next" "$staged"
+  mkdir -p data/Saves
+  mv "$staged"/* data/Saves/ && rmdir "$staged"
+  echo "rescued into data/Saves/; the init service will start the shard on it" >&2
+}
+rescue_staged_save
+
 git checkout -q "$latest"
 docker compose -f "$COMPOSE_FILE" -p "$PROJECT" up -d --build --remove-orphans
 echo "now on $latest"

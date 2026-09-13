@@ -39,7 +39,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/mnt" -w /mnt \
             koalaman/shellcheck-alpine:stable \
-            shellcheck tools/set-password.sh tools/world-stats.sh
+            shellcheck tools/set-password.sh tools/world-stats.sh tools/init-save-layout.sh tools/healthcheck.sh tests/e2e-save-layout.sh update.sh
 
       - name: hadolint (Dockerfile linting)
         run: |
@@ -78,11 +78,41 @@ jobs:
             echo "::error::Could not determine the latest ModernUO release"
             exit 1
           fi
-          if [ "$pinned" != "$latest" ]; then
+          # ORDER, NOT INEQUALITY. `!=` calls any difference "behind", including
+          # being ahead, and GitHub's releases/latest is the most recently
+          # PUBLISHED release rather than the highest version. sort -V, because
+          # a string compare puts 0.15.6.178 below 0.15.6.99.
+          if [ "$pinned" = "$latest" ]; then
+            echo "MODERNUO_REF ${pinned} matches the latest release"
+          elif [ "$(printf '%s\n%s\n' "$pinned" "$latest" | sort -V | head -1)" = "$pinned" ]; then
             echo "::error::MODERNUO_REF is behind: pinned ${pinned}, latest release is ${latest}"
             exit 1
+          else
+            echo "MODERNUO_REF ${pinned} is ahead of the published ${latest}, which is what a maintenance release for an older branch looks like"
           fi
-          echo "MODERNUO_REF ${pinned} matches the latest release"
+
+      - name: Compare the init image pin against what its tag resolves to now
+        # The compose file pins alpine by digest for the init service. A tag
+        # that re-resolves to a new digest is a rebuild upstream, and a pin that
+        # nobody re-resolves is a pin nobody is watching.
+        run: |
+          pin="$(grep -m1 -oE '\$\{MODERNUO_INIT_IMAGE_TAG:-.*' docker-compose.yml | sed -E -e ':a' -e 's/\$\{[A-Z0-9_]+:-([^{}]*)\}/\1/' -e 'ta')"
+          ref="${pin%%@*}"; pinned_digest="${pin##*@}"
+          current_digest=""
+          for attempt in 1 2 3; do
+            current_digest="$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest}}' 2>/dev/null | jq -r '.digest // empty')"
+            [ -n "$current_digest" ] && break
+            sleep $(( attempt * 5 ))
+          done
+          if [ -z "$current_digest" ]; then
+            echo "::error::${ref} did not resolve after three attempts: the registry did not answer, or the tag is gone. The pin itself is unchanged."
+            exit 1
+          fi
+          if [ "$pinned_digest" != "$current_digest" ]; then
+            echo "::error::MODERNUO_INIT_IMAGE_TAG digest drift: pinned ${pinned_digest}, but ${ref} now resolves to ${current_digest}"
+            exit 1
+          fi
+          echo "MODERNUO_INIT_IMAGE_TAG OK (${ref})"
 
   healthcheck:
     name: The health check can go red, and green
@@ -107,6 +137,31 @@ jobs:
         run: |
           chmod +x tests/e2e-healthcheck.sh
           ./tests/e2e-healthcheck.sh
+
+  save-layout:
+    name: The save directory is not the mount point
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: The mechanism, the init step, the health check and the index reader
+        # A full shard cannot boot here, so the save cycle itself is not
+        # observed. Every piece the fix rests on is: that a mount point cannot
+        # be renamed and a directory inside one can; that the init step moves an
+        # old-layout world, rewrites world.savePath, refuses two worlds and is
+        # idempotent; that the health check, the same file production runs,
+        # goes red on a stale save and on no process; and that the save-index
+        # reader counts a v5 index correctly and refuses a version it does not
+        # know. Negative cases throughout: a check that has only ever passed
+        # has not proved it can fail.
+        run: |
+          chmod +x tests/e2e-save-layout.sh
+          ./tests/e2e-save-layout.sh
 
   scan-trivy:
     name: Scan the image this repository builds
@@ -143,6 +198,39 @@ jobs:
         with:
           sarif_file: trivy-modernuo.sarif
           category: trivy-modernuo
+
+  scan-init:
+    name: Scan the pinned init image with Trivy
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read the pinned init image from the compose file
+        id: pin
+        run: |
+          image="$(grep -m1 -oE '\$\{MODERNUO_INIT_IMAGE_TAG:-.*' docker-compose.yml | sed -E -e ':a' -e 's/\$\{[A-Z0-9_]+:-([^{}]*)\}/\1/' -e 'ta')"
+          [ -n "$image" ] || { echo "MODERNUO_INIT_IMAGE_TAG default not found in x-images" >&2; exit 1; }
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Trivy scan of the init image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.pin.outputs.image }}
+          format: sarif
+          output: trivy-init.sarif
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Upload Trivy SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          sarif_file: trivy-init.sarif
+          category: trivy-init
 
   build-and-test:
     name: Build the image + runtime smoke
