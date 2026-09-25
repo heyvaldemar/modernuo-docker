@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`MODERNUO_REF` moves from `0.15.6.178` to `0.15.6.198`.** The one upstream
+  release in between; its notes name spawner and network changes and nothing
+  about saves, persistence or configuration, and the deployment verification
+  exercises a world save on the new build before this ships. The save
+  layout this template documents for 0.15.6.178 is unchanged.
+
 - **The freshness check has its own workflow, Pin Freshness.** It ran inside Deployment Verification, whose badge is the one at the top of this README. Across the fleet, nine red runs in ten were a pin one version behind - which the fleet's triage moves within the day - and a reader cannot tell that from a stack that does not boot. The badge now says whether the stack boots. The job itself is unchanged.
 
 ## [1.3.4] - 2026-09-19
