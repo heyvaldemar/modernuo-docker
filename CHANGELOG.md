@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.3.5] - 2026-09-24
+
 ### Changed
 
 - **`MODERNUO_REF` moves from `0.15.6.178` to `0.15.6.198`.** The one upstream
