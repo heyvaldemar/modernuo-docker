@@ -1,6 +1,7 @@
 # modernuo-docker
 
 [![Deployment Verification](https://github.com/heyvaldemar/modernuo-docker/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/modernuo-docker/actions/workflows/deployment-verification.yml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14888/badge)](https://www.bestpractices.dev/projects/14888)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Multi-stage Docker build for [ModernUO](https://github.com/modernuo/ModernUO), the Ultima Online shard emulator on .NET 10. Compose stack, upstream release watcher, and no game data baked into the image.
