@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`MODERNUO_REF` moves from `0.15.6.198` to `0.15.6.218`.** One upstream release of twenty changes, most of them
+  fixes and two of them crashes: digging up a treasure-map chest that spawns guardians, and enumerators that ended early
+  or never ended. It carries one save-format change. `BaseCreature` goes to serialization version 24, where the
+  `ControlMaster` and `SummonMaster` references become a single `Master`; ModernUO converts a version 23 world when it
+  loads it, and the first save after that is version 24, which 0.15.6.198 was not written to read. Back up `Saves` before
+  upgrading: going back means restoring that backup. This template's CI builds the new server and checks the save layout,
+  the health check and the save-index reader. It cannot boot a shard without game data, so it does not observe the
+  conversion itself; the 1.3.5 entry below said it observed a world save, which it never did, and that line is corrected.
+
 ### Fixed
 
 - **`update.sh` no longer stops without a word when a release adds a variable and no compose file requires one.** The search for `${VAR:?}` came back empty, and under `pipefail` that empty result ended the script with status 1 right after it listed the new variables.
@@ -18,9 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`MODERNUO_REF` moves from `0.15.6.178` to `0.15.6.198`.** The one upstream
   release in between; its notes name spawner and network changes and nothing
-  about saves, persistence or configuration, and the deployment verification
-  exercises a world save on the new build before this ships. The save
-  layout this template documents for 0.15.6.178 is unchanged.
+  about saves, persistence or configuration. The deployment verification
+  builds the new server; it cannot boot a shard without game data, so a
+  world save on the new build is not observed there. The save layout this
+  template documents for 0.15.6.178 is unchanged.
 
 - **The freshness check has its own workflow, Pin Freshness.** It ran inside Deployment Verification, whose badge is the one at the top of this README. Across the fleet, nine red runs in ten were a pin one version behind - which the fleet's triage moves within the day - and a reader cannot tell that from a stack that does not boot. The badge now says whether the stack boots. The job itself is unchanged.
 
