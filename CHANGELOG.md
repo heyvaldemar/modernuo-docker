@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.3.6] - 2026-10-10
+
 ### Changed
 
 - **`MODERNUO_REF` moves from `0.15.6.198` to `0.15.6.218`.** One upstream release of twenty changes, most of them
@@ -159,7 +163,9 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.4...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.6...HEAD
+[1.3.6]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.5...v1.3.6
+[1.3.5]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/heyvaldemar/modernuo-docker/releases/tag/v1.3.2
