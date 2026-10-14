@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.3.7] - 2026-10-14
+
 ### Fixed
 
 - **The image builds again.** Two .NET advisories published on 2026-10-13 cover `System.Security.Cryptography.Pkcs`
@@ -171,7 +175,8 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.6...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.7...HEAD
+[1.3.7]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.3...v1.3.4
