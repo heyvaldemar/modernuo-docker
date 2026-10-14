@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Fixed
+
+- **The image builds again.** Two .NET advisories published on 2026-10-13 cover `System.Security.Cryptography.Pkcs`
+  10.0.0, which ModernUO 0.15.6.218 gets through MailKit 4.18.0: CVE-2026-84008 (high) and CVE-2026-70162 (moderate),
+  both denial of service, both fixed in 10.0.13. ModernUO treats NuGet audit warnings as errors, so from that day its
+  package restore stopped and the build failed for anyone building this template, CI included. The Dockerfile now adds a
+  direct reference to 10.0.13 after checking out ModernUO, which wins over the transitive one; both projects that carried
+  10.0.0 now resolve 10.0.13, and that is the DLL the image ships. Nothing in a shard's data or configuration changes. The
+  reference comes out once a ModernUO release carries 10.0.13 itself.
 
 ## [1.3.6] - 2026-10-10
 
