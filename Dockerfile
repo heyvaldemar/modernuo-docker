@@ -23,8 +23,8 @@ RUN git clone https://github.com/modernuo/ModernUO.git . \
 # release in MODERNUO_REF references 10.0.13 or later itself.
 ARG PKCS_VERSION=10.0.13
 RUN dotnet add Projects/UOContent/UOContent.csproj package System.Security.Cryptography.Pkcs \
-      --version "${PKCS_VERSION}" --no-restore
-RUN ./publish.sh release linux x64
+      --version "${PKCS_VERSION}" --no-restore \
+    && ./publish.sh release linux x64
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 # ModernUO P/Invokes native libs that the stock runtime image lacks:
