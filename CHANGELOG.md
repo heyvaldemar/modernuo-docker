@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Changed
+
+- **`MODERNUO_REF` moves from `0.15.6.218` to `0.15.6.240`.** Twenty-two upstream changes, nearly all of them gameplay
+  fixes. One is a security fix: an archive entry that would extract outside its output directory is refused. It carries
+  one save-format change: `ChampionSpawn` goes to serialization version 12 and migrates from 11 on load, and vendors
+  keep their buyback stock in a new `VendorBuybackPack`. A world saved by 0.15.6.240 does not load on 0.15.6.218, so
+  take a backup before the first start and keep it until the shard has run on the new release.
+- **The direct reference to `System.Security.Cryptography.Pkcs` 10.0.13 is gone.** ModernUO 0.15.6.240 references
+  `[10.0.13, )` itself and moves MailKit to 4.18.1, which is the condition 1.3.7 named for removing it.
 
 ## [1.3.7] - 2026-10-14
 

@@ -15,16 +15,7 @@ WORKDIR /src
 ARG MODERNUO_REF=main
 RUN git clone https://github.com/modernuo/ModernUO.git . \
     && git checkout "${MODERNUO_REF}"
-# MailKit 4.18.0 brings in System.Security.Cryptography.Pkcs 10.0.0, which two
-# .NET advisories published on 2026-10-13 cover (CVE-2026-84008 high,
-# CVE-2026-70162 moderate; fixed in 10.0.13). ModernUO treats NuGet audit
-# warnings as errors, so its restore stops on them. A direct reference to the
-# fixed version wins over the transitive one. Remove it once the ModernUO
-# release in MODERNUO_REF references 10.0.13 or later itself.
-ARG PKCS_VERSION=10.0.13
-RUN dotnet add Projects/UOContent/UOContent.csproj package System.Security.Cryptography.Pkcs \
-      --version "${PKCS_VERSION}" --no-restore \
-    && ./publish.sh release linux x64
+RUN ./publish.sh release linux x64
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 # ModernUO P/Invokes native libs that the stock runtime image lacks:
