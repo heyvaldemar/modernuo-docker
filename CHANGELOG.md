@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.4.0] - 2026-10-20
+
 ### Added
 
 - **`tools/world-census.py`: every entity in a save counted by type, and two saves compared**, for exactly the kind of upgrade below. It reads index versions 4 and 5 in the layout ModernUO writes at the pinned revision, and refuses, exit 2, an index it cannot read exactly: an unknown version, one that ends before its entries, an entry naming a type outside the table. `tests/e2e-census.sh` (10 checks) writes indexes in that layout, models this release's migration (1,469 Backpack becoming VendorBuybackPack, 53 items decayed) and every refusal. Against a copy that reads a version 5 index at the version 4 offset, the bug `world-stats.sh` once had, 8 of the 10 fail.
@@ -191,7 +195,8 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.7...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.7...v1.4.0
 [1.3.7]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.4...v1.3.5
