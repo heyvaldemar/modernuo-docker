@@ -35,6 +35,20 @@ To upgrade, change `MODERNUO_REF` in `.env` and rebuild:
 docker compose up -d --build
 ```
 
+### An upgrade, item for item
+
+A release that migrates the save format is a world change: old saves load, and going back means restoring a backup. "It started and I can log in" says nothing about whether every item came through. `tools/world-census.py` reads the save index and counts every item, mobile and guild by type, and compares two censuses:
+
+```bash
+tools/world-census.py data/Saves > before.json     # the old build's last save
+docker compose up -d --build                       # MODERNUO_REF changed
+# ... after the new build's first save (autosave, or [Save in game):
+tools/world-census.py data/Saves > after.json
+tools/world-census.py --compare before.json after.json
+```
+
+A clean upgrade shows the totals of the old save, give or take the spawning and decay of the minutes between the two saves, and a release's migration shows as itself: one type down and another up by the same number. On the server this template comes from, 0.15.6.218 to 0.15.6.240 loaded exactly the old save's 174,247 items and 29,116 mobiles, and the comparison showed 1,469 Backpack becoming VendorBuybackPack, the vendor buyback change in that release ([ModernUO #2677](https://github.com/modernuo/ModernUO/pull/2677)). Only the index is read, never the world data, so it is safe on a live save or one restored from a backup. An index it cannot read exactly (an unknown version, a file that ends early, a type index outside the table) is refused with exit 2, never counted.
+
 ## What is in the image, and what is not
 
 **In:** the ModernUO server published for `linux-x64`, the .NET 10 runtime, and `libdeflate` and `libargon2` from Debian.

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`tools/world-census.py`: every entity in a save counted by type, and two saves compared**, for exactly the kind of upgrade below. It reads index versions 4 and 5 in the layout ModernUO writes at the pinned revision, and refuses, exit 2, an index it cannot read exactly: an unknown version, one that ends before its entries, an entry naming a type outside the table. `tests/e2e-census.sh` (10 checks) writes indexes in that layout, models this release's migration (1,469 Backpack becoming VendorBuybackPack, 53 items decayed) and every refusal. Against a copy that reads a version 5 index at the version 4 offset, the bug `world-stats.sh` once had, 8 of the 10 fail.
+
+### Removed
+
+- A compiled `uowatch/__pycache__/watch.cpython-314.pyc` that had been committed.
+
 ### Changed
 
 - **`MODERNUO_REF` moves from `0.15.6.218` to `0.15.6.240`.** Twenty-two upstream changes, nearly all of them gameplay

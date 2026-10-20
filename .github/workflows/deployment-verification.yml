@@ -39,7 +39,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/mnt" -w /mnt \
             koalaman/shellcheck-alpine:stable \
-            shellcheck tools/set-password.sh tools/world-stats.sh tools/init-save-layout.sh tools/healthcheck.sh tests/e2e-save-layout.sh update.sh
+            shellcheck tools/set-password.sh tools/world-stats.sh tools/init-save-layout.sh tools/healthcheck.sh tests/e2e-save-layout.sh tests/e2e-census.sh update.sh
 
       - name: hadolint (Dockerfile linting)
         run: |
@@ -103,6 +103,11 @@ jobs:
         run: |
           chmod +x tests/e2e-save-layout.sh
           ./tests/e2e-save-layout.sh
+
+      - name: A save counted by type, two saves compared, and what is refused
+        # Indexes written in the layout ModernUO writes, a migration modelled
+        # between two of them, and each index the census must refuse.
+        run: ./tests/e2e-census.sh
 
   scan-trivy:
     name: Scan the image this repository builds
