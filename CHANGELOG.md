@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.4.2] - 2026-10-23
+
 ### Security
 
 - **`alpine:3.22` was rebuilt upstream**; the pin moved from `sha256:d406446bc05b…` to `sha256:2e0b81d60597…`. Same version, same tag, a rebuilt base image — the usual shape of a security fix in a base layer.
@@ -203,7 +207,8 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.7...v1.4.0
 [1.3.7]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.3.6...v1.3.7
