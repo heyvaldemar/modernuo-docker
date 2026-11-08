@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.4.5] - 2026-11-08
+
 ### Changed
 
 - **The README says why the health check does not speak the game protocol.** A client's login is the only question the shard answers before a session, ModernUO creates an account on the first login it does not know, and without the UO client files no CI can start a shard to prove such a check against. The check stays the process plus a world saved within `MODERNUO_SAVE_MAX_AGE` minutes, and the README now also says it asks from inside the container.
-
 ## [1.4.4] - 2026-11-07
 
 ### Changed
@@ -228,7 +231,8 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.4...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.5...HEAD
+[1.4.5]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.3...v1.4.4
 [1.4.3]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.1...v1.4.2
