@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _(no unreleased changes yet)_
 
+## [1.4.4] - 2026-11-07
+
+### Changed
+
+- **`MODERNUO_REF` moves from `0.15.6.240` to `0.15.6.264`.** Twenty-four upstream changes, nearly all of them fixes:
+  T2A crafting and cooking, login detection for older classic clients, a TownCrier timer that outlived its crier, and
+  IPv6 listeners, peers and address ranges. No save-format change: no serialization version moved, and both changes to
+  saved times say so. They change how a save is read: a deadline that had already passed when the server saved stays
+  passed, and downtime now counts toward windows measured from a past stamp (Honor's 5 minutes, virtue atrophy's 7
+  days). This template listens on IPv4 only, which behaves as before, and the new `accountHandler.maxLoginsPerIP` cap
+  is off by default. Custom C# that reads `Core.IsLinux` and the other OS flags, or implements `IBanReporter`, needs
+  the changes upstream's pull requests #2747 and #2751 name. MailKit moves to 4.18.2 and the .NET packages to 10.0.14.
+
 ## [1.4.3] - 2026-11-06
 
 ### Security
@@ -213,7 +226,8 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.3...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.4...HEAD
+[1.4.4]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.3...v1.4.4
 [1.4.3]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.0...v1.4.1
