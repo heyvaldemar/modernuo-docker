@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Changed
+
+- **The README says why the health check does not speak the game protocol.** A client's login is the only question the shard answers before a session, ModernUO creates an account on the first login it does not know, and without the UO client files no CI can start a shard to prove such a check against. The check stays the process plus a world saved within `MODERNUO_SAVE_MAX_AGE` minutes, and the README now also says it asks from inside the container.
 
 ## [1.4.4] - 2026-11-07
 

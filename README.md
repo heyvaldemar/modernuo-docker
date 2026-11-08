@@ -224,7 +224,7 @@ If it prints, and `./data` holds no world, copy it out before anything is recrea
 mkdir -p data/Saves && docker cp modernuo:/app/Saves.next/. data/Saves/
 ```
 
-The health check now asks two questions rather than one: is the process up, and has it written its world to disk inside `MODERNUO_SAVE_MAX_AGE` minutes. The second is the one that catches a full disk, a wrong permission, a broken mount, or the next upstream rearrangement, none of which a process check can see.
+The health check now asks two questions rather than one: is the process up, and has it written its world to disk inside `MODERNUO_SAVE_MAX_AGE` minutes. The second is the one that catches a full disk, a wrong permission, a broken mount, or the next upstream rearrangement, none of which a process check can see. It does not speak the game protocol on 2593, deliberately: a client's login is the only question the shard answers before a session, ModernUO creates an account on the first login it does not know (`AutoAccountCreation`), and without the UO client files, which are not the repository's to ship, no CI can start a shard to prove a protocol check against. A stalled world loop stops the saves, and that turns this check red within the save window. It asks from inside the container: healthy does not prove the port is published on the host or open in your firewall.
 
 ### Do not give the container a TTY
 
