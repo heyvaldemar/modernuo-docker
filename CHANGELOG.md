@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.4.6] - 2026-11-08
+
 ### Security
 
 - **`tools/set-password.sh` hands the new password to its helper containers by name.** It started both helpers with `-e ACCT="$ACCT" -e NEW="$NEW"`: the password it had just generated sat in the docker CLI's arguments, readable by every user on the host with `ps`, while each helper ran. Both values are now exported and passed as `-e ACCT -e NEW`. If other people can log in to the host where you ran it with an earlier release, set the password again. The save-layout test passes its health check's age the same way.
@@ -233,7 +237,8 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.5...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.6...HEAD
+[1.4.6]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.5...v1.4.6
 [1.4.5]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.3...v1.4.4
 [1.4.3]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.2...v1.4.3
