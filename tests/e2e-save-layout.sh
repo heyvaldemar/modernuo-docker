@@ -138,7 +138,7 @@ echo "=== the health check, the same script production runs, against fake state 
 docker rm -f "$HC" >/dev/null 2>&1
 docker run -d --name "$HC" -v "$PWD/tools/healthcheck.sh:/healthcheck.sh:ro" "$RUNTIME" sh -c 'sleep 3600' /app/ModernUO.dll >/dev/null
 sleep 1
-hc() { docker exec -e MODERNUO_SAVE_FILE=/tmp/w/Items.bin -e MODERNUO_SAVE_MAX_AGE="${1:-20}" "$HC" sh /healthcheck.sh; }
+hc() { MODERNUO_SAVE_MAX_AGE="${1:-20}" docker exec -e MODERNUO_SAVE_FILE=/tmp/w/Items.bin -e MODERNUO_SAVE_MAX_AGE "$HC" sh /healthcheck.sh; }
 docker exec "$HC" sh -c 'mkdir -p /tmp/w && touch /tmp/w/Items.bin'
 if hc; then pass "process up, save written just now: healthy"; else fail "a fresh save was called unhealthy"; fi
 docker exec "$HC" sh -c 'touch -d "30 minutes ago" /tmp/w/Items.bin'

@@ -54,9 +54,13 @@ mkdir -p secrets
 # SIGPIPE, and with `set -o pipefail` the pipeline returns 141, which `set -e`
 # turns into a silent exit — leaving the server stopped and nothing changed.
 NEW=$(head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-16)
+# Both reach the containers below by name (-e ACCT -e NEW). Until 2026-11-08
+# they went as -e NEW="$NEW", which put the new password in docker's own
+# arguments, readable by every user on the host with ps while it ran.
+export ACCT NEW
 
 docker run --rm -v "$PWD/$DATA:/d" -v "$PWD/tools/sethash.py:/sethash.py:ro" \
-  -e ACCT="$ACCT" -e NEW="$NEW" python:3-slim \
+  -e ACCT -e NEW python:3-slim \
   sh -c 'pip install -q argon2-cffi >/dev/null 2>&1 && python3 /sethash.py'
 
 install -m 600 /dev/null "$OUT"
@@ -76,7 +80,7 @@ done
 echo "== verifying with a real login"
 docker compose exec -T "$SERVICE" true 2>/dev/null || true
 docker run --rm --network "container:$(docker compose ps -q "$SERVICE")" \
-  -e ACCT="$ACCT" -e NEW="$NEW" python:3-alpine python3 -c '
+  -e ACCT -e NEW python:3-alpine python3 -c '
 import os, socket, struct, time
 a=os.environ["ACCT"].encode(); p=os.environ["NEW"].encode()
 s=socket.create_connection(("127.0.0.1",2593),timeout=8)
