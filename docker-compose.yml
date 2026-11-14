@@ -54,6 +54,9 @@ services:
         MODERNUO_REF: ${MODERNUO_REF:-0.15.6.269}
     image: *modernuo-image
     container_name: modernuo
+    # tools/start.sh, then the server on a console it can be told to save on:
+    # a stop saves the world first (see stop_grace_period below).
+    entrypoint: ["/bin/bash", "/start.sh"]
     restart: unless-stopped
     ports:
       - "${MODERNUO_PORT:-2593}:2593/tcp"
@@ -75,6 +78,8 @@ services:
       # at ./data/Saves/.
       - ./data:/app/World
       - ./tools/healthcheck.sh:/healthcheck.sh:ro
+      # The entrypoint: a console for the server, and "save" on it before a stop.
+      - ./tools/start.sh:/start.sh:ro
       # Server configuration ModernUO writes and reads.
       - ./config:/app/Configuration
       # UO CLIENT DATA — read-only, and supplied by YOU. See the README: these
@@ -106,6 +111,10 @@ services:
       # slow save or a restart, nowhere near a false alarm. Shorten it if you
       # shortened autosave.saveDelay.
       MODERNUO_SAVE_MAX_AGE: ${MODERNUO_SAVE_MAX_AGE:-20}
+      # How long a stop waits for the world to be saved before the server is
+      # told to shut down anyway, in seconds (tools/start.sh). Inside the
+      # grace period below, with room left for the shutdown itself.
+      MODERNUO_STOP_SAVE_WAIT: ${MODERNUO_STOP_SAVE_WAIT:-30}
     healthcheck:
       # TWO QUESTIONS, in tools/healthcheck.sh: is the process up, and has it
       # written its world down recently. The first alone is what every shard
@@ -113,26 +122,31 @@ services:
       # save six minutes ago. The script is the same file the test suite runs
       # against fake state, so what CI proves is what production checks.
       #
-      # On the process half: ModernUO is .NET, so the only comm in this
-      # container is dotnet, and a check for ModernUO in /proc/*/comm returns 1
-      # every time. The bracket in [M]odernUO keeps pgrep -f from matching the
-      # shell that carries the check, which would make it green forever.
+      # On the process half: ModernUO is .NET, so the server's comm is dotnet,
+      # and the check asks for exactly that (pgrep -x dotnet). A check on the
+      # command line for ModernUO is satisfied by things that are not the
+      # server: the shell carrying the check, and script(1), which
+      # tools/start.sh runs the server under.
       test: ["CMD", "sh", "/healthcheck.sh"]
       interval: 60s
       timeout: 10s
       retries: 3
       start_period: ${MODERNUO_START_PERIOD:-3m}
-    # MODERNUO DOES NOT SAVE ON SHUTDOWN. Measured: 639 saves before a stop and
-    # 639 after, so a restart discards everything newer than the last autosave.
-    # The grace period does not fix that — only a short autosave interval does,
-    # which is set in Configuration. It is here so an in-flight save is allowed
-    # to finish rather than being cut in half by SIGKILL.
+    # MODERNUO DOES NOT SAVE ON SHUTDOWN BY ITSELF. Measured: 639 saves before a
+    # stop and 639 after, so a restart discarded everything newer than the
+    # last autosave. tools/start.sh now says "save" on the server's console
+    # when Docker's SIGTERM arrives, waits for the world to be written
+    # (MODERNUO_STOP_SAVE_WAIT, 30 s), then lets the server shut down; the
+    # grace period covers both. Measured on a live shard; CI cannot start a
+    # shard without the client files, so CI proves the signal path only
+    # (tests/e2e-start.sh).
     stop_grace_period: ${MODERNUO_STOP_GRACE_PERIOD:-60s}
     # NO TTY, DELIBERATELY. A TTY switches ModernUO to coloured output, and the
     # escape codes land between the fields of every log line. Anything reading
     # these logs — a fail2ban filter, a login-attempt watcher, your own grep —
-    # then silently matches nothing, which is a worse trade than a plain
-    # console is worth.
+    # then silently matches nothing. The server gets its terminal from
+    # tools/start.sh instead, inside the container, which takes the colour
+    # codes out before the lines reach these logs.
     tty: false
     logging:
       driver: json-file

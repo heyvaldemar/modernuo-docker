@@ -184,13 +184,13 @@ Generators exist for content your expansion may not include. Check `Configuratio
 
 Four things that are not obvious until they cost you something.
 
-### The world is not saved on shutdown
+### A stop saves the world first
 
-Stopping the container does not save. Measured on a running shard: 639 completed saves before `docker compose stop`, 639 after. Everything that changed since the last autosave is discarded: accounts, characters, items, the lot.
+ModernUO does not save on shutdown. Measured on a running shard: 639 completed saves before `docker compose stop`, 639 after. Everything that changed since the last autosave was discarded: accounts, characters, items, the lot. A password changed in game, a character created, an item moved: restart within the autosave window and it never happened, with nothing in any log to say so.
 
-This is easy to miss because the failure is silent and delayed. A password changed in game, a character created, an item moved: restart within the autosave window and it never happened, with nothing in any log to say so.
+`tools/start.sh`, the container's entrypoint, closes that gap. ModernUO reads its console only from a terminal, so start.sh runs it on one, and when Docker's SIGTERM arrives it types `save` there, waits up to `MODERNUO_STOP_SAVE_WAIT` seconds (30) for `Items.bin` to be written, and only then hands the server SIGTERM; `stop_grace_period` (60 s) covers both. Save on SIGTERM measured on a live shard: the stop took 1.2 seconds, the world was written a second after it began, and the server exited 143. CI cannot start a shard without the client files, so CI proves the signal path only (`tests/e2e-start.sh`, with a stand-in server).
 
-The autosave interval is the only thing standing between a restart and lost work:
+The autosave is still the only thing standing between a crash, an out-of-memory kill or a power cut and lost work:
 
 ```json
 "autosave.saveDelay": "00:01:00"
@@ -202,7 +202,7 @@ The shipped default is five minutes. On a small world a save takes 0.02–0.07 s
 docker logs uo --since 5m 2>&1 | grep -ac 'Saving world done'
 ```
 
-There is a console command to force a save, but it needs an interactive TTY: see below for why giving the container one is a bad trade.
+The console is start.sh's alone: the pipe it reads from is removed once it is open, so nothing else in the container can type on it.
 
 ### The save directory is not the mount point
 
@@ -236,7 +236,7 @@ Login: <esc>[36m1.2.3.4<esc>[37m Invalid password for 'someone'
 
 Anything that reads those logs (a fail2ban filter, an alerting script, a grep in a cron job) expects a plain space there and silently matches nothing. A monitor that quietly stops matching is worse than no monitor: it reports healthy while seeing nothing.
 
-The only thing a TTY buys is the interactive console, whose useful command is `save`. Shortening the autosave interval achieves the same end without breaking every log consumer.
+The console, whose useful command is `save`, does not need one: `tools/start.sh` gives the server a terminal of its own inside the container and takes the colour codes and carriage returns out before the lines reach `docker compose logs`.
 
 ### `[Password` refuses for anyone whose address has changed
 

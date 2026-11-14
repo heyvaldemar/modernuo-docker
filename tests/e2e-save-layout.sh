@@ -136,8 +136,12 @@ fi
 echo
 echo "=== the health check, the same script production runs, against fake state ==="
 docker rm -f "$HC" >/dev/null 2>&1
-docker run -d --name "$HC" -v "$PWD/tools/healthcheck.sh:/healthcheck.sh:ro" "$RUNTIME" sh -c 'sleep 3600' /app/ModernUO.dll >/dev/null
-sleep 1
+# The server stands in as process 1 with the comm the real one has, dotnet: a
+# shell script of that name (the image's coreutils picks what to be by the name
+# it runs under, so a renamed sleep cannot be it).
+docker run -d --name "$HC" -v "$PWD/tools/healthcheck.sh:/healthcheck.sh:ro" "$RUNTIME" \
+  sh -c 'printf "#!/bin/sh\nwhile :; do sleep 1; done\n" >/tmp/dotnet && chmod +x /tmp/dotnet && exec /tmp/dotnet /app/ModernUO.dll' >/dev/null
+for _ in $(seq 1 30); do docker exec "$HC" sh -c 'pgrep -x dotnet >/dev/null' 2>/dev/null && break; sleep 0.5; done
 hc() { MODERNUO_SAVE_MAX_AGE="${1:-20}" docker exec -e MODERNUO_SAVE_FILE=/tmp/w/Items.bin -e MODERNUO_SAVE_MAX_AGE "$HC" sh /healthcheck.sh; }
 docker exec "$HC" sh -c 'mkdir -p /tmp/w && touch /tmp/w/Items.bin'
 if hc; then pass "process up, save written just now: healthy"; else fail "a fresh save was called unhealthy"; fi
@@ -148,9 +152,9 @@ docker exec "$HC" sh -c 'rm -f /tmp/w/Items.bin'
 if hc; then pass "no save yet on a shard up for seconds: healthy (it is still booting)"; else fail "a young shard with no save was called unhealthy"; fi
 if hc 0; then fail "no save on a shard older than the window passed"; else pass "no save once the shard is older than the window: unhealthy"; fi
 if docker run --rm -v "$PWD/tools/healthcheck.sh:/healthcheck.sh:ro" "$RUNTIME" sh /healthcheck.sh >/dev/null 2>&1; then
-  fail "the health check was green with no ModernUO process at all"
+  fail "the health check was green with no server process at all"
 else
-  pass "no ModernUO process: unhealthy"
+  pass "no server process: unhealthy"
 fi
 
 echo

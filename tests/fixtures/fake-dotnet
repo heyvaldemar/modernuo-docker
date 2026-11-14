@@ -1,0 +1,20 @@
+#!/bin/bash
+# fake-dotnet: a stand-in for `dotnet ModernUO.dll`, for tests/e2e-start.sh.
+# What it copies from ModernUO 0.15.6.269: console input only from a
+# terminal (headless otherwise), a "save" console command that writes the
+# world, coloured output on a terminal, and SIGTERM ending it with 143 and
+# no save of its own.
+if [ -t 0 ]; then
+  printf '\033[32m[INF]\033[0m Console input enabled\n'
+else
+  echo "[INF] Console input disabled (headless: stdin is not a TTY)."
+  trap 'echo "[INF] Detected SIGTERM."; echo "[INF] Shutting down"; exit 143' TERM
+  while :; do sleep 1; done
+fi
+trap 'echo "[INF] Detected SIGTERM."; echo "[INF] Shutting down"; exit 143' TERM
+while :; do
+  IFS= read -r -t 1 line || continue
+  case "${line%$'\r'}" in
+    save) sleep 2; mkdir -p /app/World/Saves/Items && : >/app/World/Saves/Items/Items.bin && printf '\033[33m[INF]\033[0m World saved\n' ;;
+  esac
+done

@@ -7,7 +7,10 @@
 # that covers a full disk, a wrong permission, a broken mount and the next
 # upstream rearrangement alike: is the save on disk newer than it should be?
 set -u
-pgrep -f '[M]odernUO' >/dev/null || exit 1
+# The process half asks for the server by its own name. ModernUO is .NET, so its
+# comm is dotnet; its command line will not do, because tools/start.sh runs it
+# under script(1), whose own command line names ModernUO too.
+pgrep -x dotnet >/dev/null || exit 1
 
 SAVE=${MODERNUO_SAVE_FILE:-/app/World/Saves/Items/Items.bin}
 MAX=${MODERNUO_SAVE_MAX_AGE:-20}

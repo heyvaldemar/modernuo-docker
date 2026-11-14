@@ -39,7 +39,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/mnt" -w /mnt \
             koalaman/shellcheck-alpine:stable \
-            shellcheck tools/set-password.sh tools/world-stats.sh tools/init-save-layout.sh tools/healthcheck.sh tests/e2e-save-layout.sh tests/e2e-census.sh tests/secret-probe.sh update.sh
+            shellcheck tools/set-password.sh tools/world-stats.sh tools/init-save-layout.sh tools/healthcheck.sh tests/e2e-save-layout.sh tests/e2e-census.sh tests/secret-probe.sh tests/e2e-start.sh tools/start.sh tests/fixtures/fake-dotnet update.sh
 
       - name: hadolint (Dockerfile linting)
         run: |
@@ -202,7 +202,19 @@ jobs:
       - name: Build the ModernUO image from the pinned release
         run: docker compose build
 
+      - name: A stop says "save" on the console first - the signal path, with a stand-in shard
+        # No shard runs here without the UO client files. tests/e2e-start.sh
+        # runs tools/start.sh in the image just built with a stand-in for
+        # the server: it gets a terminal (ModernUO reads its console only
+        # from one), and on docker stop "save" reaches it, the world is
+        # written, and only then does the server get SIGTERM. The image's
+        # own entrypoint, the control: headless, and no save.
+        run: ./tests/e2e-start.sh
+
       - name: Boot the server binary and verify the runtime dependencies
+        env:
+          # No world to save without a shard: the stop need not wait long.
+          MODERNUO_STOP_SAVE_WAIT: "3"
         # The UO client art/map files are proprietary and deliberately not
         # in this repository, so a full shard cannot boot in CI. What CAN
         # be proven: the published binary starts under the runtime image
@@ -224,6 +236,12 @@ jobs:
             exit 1
           fi
           echo "Server binary starts and reaches the client-data stage"
+          # The real server under tools/start.sh: it has a terminal now, so it
+          # waits at its first-run question instead of failing on it, and a
+          # stop goes through start.sh ("save" first, then SIGTERM).
+          docker compose logs modernuo 2>&1 | grep -q 'HeadlessConsoleInputException' && { echo "::error::the server is still headless under start.sh"; exit 1; }
+          docker compose stop modernuo >/dev/null
+          docker compose logs modernuo 2>&1 | grep -E 'start.sh: (stopping|no save|the world is saved)' || { echo "::error::the stop did not go through start.sh"; exit 1; }
 
       - name: The webhook address uowatch posts to, looked for everywhere (tests/secret-probe.sh)
         # The one secret this template handles: an incoming webhook's address

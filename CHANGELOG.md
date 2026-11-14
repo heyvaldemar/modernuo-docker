@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Fixed
+
+- **A stop saves the world first.** ModernUO does not save on SIGTERM, so every stop, restart and update discarded everything since the last autosave (measured: 639 saves before a stop, 639 after). `tools/start.sh` is now the entrypoint: it runs the server on a terminal, the only place ModernUO reads its console from, and on Docker's SIGTERM types `save` there, waits up to `MODERNUO_STOP_SAVE_WAIT` seconds (30) for `Items.bin` to be written, then hands the server SIGTERM, inside the 60-second grace period. Save on SIGTERM measured on a live shard: a 1.2-second stop, the world written a second after it began, exit 143. CI cannot start a shard without the client files, so CI proves the signal path only (`tests/e2e-start.sh`, with a stand-in server, and the image's own entrypoint as the control: headless, no save).
+
+### Changed
+
+- **The health check asks for the server by name, `pgrep -x dotnet`.** Under `tools/start.sh` the server's command line is also in that of script(1), which runs it, so `pgrep -f '[M]odernUO'` is green on the wrapper alone. `tests/e2e-healthcheck.sh` measures all three ways a process check here goes wrong, and `tests/e2e-start.sh` that the check finds the server under start.sh.
+- **No colour codes in the logs, with a terminal.** A terminal turns ModernUO's colour on; start.sh takes the codes and the carriage returns out before the lines reach `docker compose logs`, so log readers keep matching.
+- **The secret probe** names the selftest's container from the workflow, reaches the log through any process sharing process 1's output, and prints a leaked line with Steam IDs and addresses replaced.
 
 ## [1.4.8] - 2026-11-14
 
