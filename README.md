@@ -291,6 +291,8 @@ cp .env.example .env          # webhook, and the version you built
 docker compose up -d
 ```
 
+The webhook's address is its key, and it stays out of sight: it reaches `watch.py` from `.env` through the container's environment, never a command line, and a failed post prints the error, not the address. CI checks that (`tests/secret-probe.sh`): with a random address in `uowatch/.env`, nothing of it in `docker compose logs`, on any command line in the container or in the host's `ps`, after the first poll and after a restart.
+
 A locally built image has no registry to watch, so tools like Diun and Watchtower cannot see it. This is the substitute: it follows the upstream *source* release rather than an image digest, which for a build-from-source project is the more accurate signal anyway.
 
 ## Game data

@@ -39,7 +39,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/mnt" -w /mnt \
             koalaman/shellcheck-alpine:stable \
-            shellcheck tools/set-password.sh tools/world-stats.sh tools/init-save-layout.sh tools/healthcheck.sh tests/e2e-save-layout.sh tests/e2e-census.sh update.sh
+            shellcheck tools/set-password.sh tools/world-stats.sh tools/init-save-layout.sh tools/healthcheck.sh tests/e2e-save-layout.sh tests/e2e-census.sh tests/secret-probe.sh update.sh
 
       - name: hadolint (Dockerfile linting)
         run: |
@@ -225,10 +225,42 @@ jobs:
           fi
           echo "Server binary starts and reaches the client-data stage"
 
+      - name: The webhook address uowatch posts to, looked for everywhere (tests/secret-probe.sh)
+        # The one secret this template handles: an incoming webhook's address
+        # is its key. The compose files pass no secret-named variable, so the
+        # probe plants nothing; the address is set where an operator sets it,
+        # in uowatch/.env, a random one (an address that answers nothing), and
+        # added to the probe's values. Then uowatch runs its first poll, and
+        # the probe looks for it in docker compose logs, every command line in
+        # the container and the host's ps; again after a restart.
+        env:
+          PROBE_PROJECT: uowatch
+          PROBE_COMPOSE: uowatch/docker-compose.yml
+        run: |
+          tests/secret-probe.sh plant
+          url="http://192.0.2.1:9/hooks/k$(openssl rand -hex 12)"
+          echo "::add-mask::$url"
+          ( umask 077
+            printf 'WEBHOOK_URL=%s\nPINNED_VERSION=ci\n' "$url" > uowatch/.env
+            printf 'WEBHOOK_URL\t%s\n' "$url" >> "$RUNNER_TEMP/secret-probe.values" )
+          W="docker compose -p uowatch -f uowatch/docker-compose.yml"
+          $W up -d >/dev/null
+          for _ in $(seq 1 60); do $W logs --no-color 2>/dev/null | grep -qE 'check failed|post failed' && break; sleep 1; done
+          $W logs --no-color | tail -5
+          tests/secret-probe.sh check "uowatch, after its first poll"
+          $W restart >/dev/null
+          for _ in $(seq 1 60); do [ "$($W logs --no-color 2>/dev/null | grep -c 'uowatch up')" -ge 2 ] && break; sleep 1; done
+          sleep 20
+          tests/secret-probe.sh check "uowatch, after a restart"
+          tests/secret-probe.sh selftest
+
       - name: Show container logs on failure
         if: failure()
         run: docker compose logs
 
       - name: Shutdown Docker Compose services
         if: always()
-        run: docker compose down
+        run: |
+          docker compose down
+          docker compose -p uowatch -f uowatch/docker-compose.yml down -v >/dev/null 2>&1 || true
+          rm -f "$RUNNER_TEMP/secret-probe.values" uowatch/.env
