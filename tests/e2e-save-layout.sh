@@ -20,7 +20,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 ALPINE="${MODERNUO_INIT_IMAGE_TAG:-alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce}"
-RUNTIME="${MODERNUO_BASE_IMAGE:-mcr.microsoft.com/dotnet/runtime:10.0}"
+RUNTIME="${MODERNUO_BASE_IMAGE:-mcr.microsoft.com/dotnet/runtime:11.0}"
 WORK="$(mktemp -d)"
 HC="hc-$$"
 PASSED=0; FAILED=0

@@ -4,7 +4,7 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14888/badge)](https://www.bestpractices.dev/projects/14888)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Multi-stage Docker build for [ModernUO](https://github.com/modernuo/ModernUO), the Ultima Online shard emulator on .NET 10. Compose stack, upstream release watcher, and no game data baked into the image.
+Multi-stage Docker build for [ModernUO](https://github.com/modernuo/ModernUO), the Ultima Online shard emulator on .NET 11. Compose stack, upstream release watcher, and no game data baked into the image.
 
 ## Why this exists
 
@@ -51,7 +51,7 @@ A clean upgrade shows the totals of the old save, give or take the spawning and 
 
 ## What is in the image, and what is not
 
-**In:** the ModernUO server published for `linux-x64`, the .NET 10 runtime, and `libdeflate` and `libargon2` from Debian.
+**In:** the ModernUO server published for `linux-x64`, the .NET 11 runtime, and `libdeflate` and `libargon2` from Ubuntu.
 
 **Not in:** any Ultima Online game data. `/uodata` is a volume. This is deliberate and is explained under [Legal](#legal).
 
@@ -65,7 +65,7 @@ If you arrived here from a search engine with one of these, the fix is in the Do
 
 ### `Could not load libdeflate`: server dies at `Core.Setup`
 
-ModernUO P/Invokes `libdeflate` for save compression. Debian packages it as `libdeflate.so.0` (versioned only) while .NET's `DllImport` resolves the unversioned `libdeflate.so`. The library is installed, the loader still cannot find it, and the server exits during startup before it prints anything useful.
+ModernUO P/Invokes `libdeflate` for save compression. Ubuntu packages it as `libdeflate.so.0` (versioned only) while .NET's `DllImport` resolves the unversioned `libdeflate.so`. The library is installed, the loader still cannot find it, and the server exits during startup before it prints anything useful.
 
 ```dockerfile
 RUN ln -sf /usr/lib/x86_64-linux-gnu/libdeflate.so.0 /usr/lib/x86_64-linux-gnu/libdeflate.so

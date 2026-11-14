@@ -19,7 +19,7 @@
 # measured here rather than asserted in a comment.
 set -uo pipefail
 
-IMAGE="${MODERNUO_BASE_IMAGE:-mcr.microsoft.com/dotnet/runtime:10.0}"
+IMAGE="${MODERNUO_BASE_IMAGE:-mcr.microsoft.com/dotnet/runtime:11.0}"
 RUN="uohc-$$"
 PASSED=0; FAILED=0
 cleanup() { docker rm -f "$RUN" >/dev/null 2>&1; }
