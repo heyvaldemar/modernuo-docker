@@ -12,7 +12,7 @@ REPO = os.environ.get("REPO", "modernuo/ModernUO")
 PINNED = os.environ.get("PINNED_VERSION", "")
 POLL = int(os.environ.get("POLL_SECONDS", "86400"))          # daily
 STATE = "/state/last_seen"
-UA = "uowatch (v@valdemar.ai)"
+UA = "uowatch (connect@valdemar.ai)"
 
 
 def latest_release():
