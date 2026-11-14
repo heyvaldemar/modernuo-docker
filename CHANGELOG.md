@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.5.0] - 2026-11-14
+
 ### Fixed
 
 - **A stop saves the world first.** ModernUO does not save on SIGTERM, so every stop, restart and update discarded everything since the last autosave (measured: 639 saves before a stop, 639 after). `tools/start.sh` is now the entrypoint: it runs the server on a terminal, the only place ModernUO reads its console from, and on Docker's SIGTERM types `save` there, waits up to `MODERNUO_STOP_SAVE_WAIT` seconds (30) for `Items.bin` to be written, then hands the server SIGTERM, inside the 60-second grace period. Save on SIGTERM measured on a live shard: a 1.2-second stop, the world written a second after it began, exit 143. CI cannot start a shard without the client files, so CI proves the signal path only (`tests/e2e-start.sh`, with a stand-in server, and the image's own entrypoint as the control: headless, no save).
@@ -271,7 +275,8 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.8...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.8...v1.5.0
 [1.4.8]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.7...v1.4.8
 [1.4.7]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.6...v1.4.7
 [1.4.6]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.5...v1.4.6
