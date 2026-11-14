@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.4.8] - 2026-11-14
+
 ### Added
 
 - **CI looks for the webhook address everywhere it could leak to.** The one secret this template handles is the incoming webhook `uowatch` posts to, whose address is its key. `tests/secret-probe.sh` puts a random one in `uowatch/.env`, the way an operator sets it, lets `uowatch` run its first poll (the post fails, on purpose: the address answers nothing), and fails on the address in `docker compose logs`, any command line in the container or the host's `ps`, after the first poll and after a restart; it names the place, never the value. It found nothing ([run 43620931248](https://github.com/heyvaldemar/modernuo-docker/actions/runs/43620931248)). The shard itself cannot run in CI without the client files, so no stop is measured there; the compose file's note on what a stop loses stands as measured on a real shard.
@@ -259,7 +263,8 @@ ner, bracketed
   configuration on host paths, and UO client data supplied by the operator
   because those files belong to Electronic Arts.
 
-[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.7...HEAD
+[Unreleased]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.8...HEAD
+[1.4.8]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.7...v1.4.8
 [1.4.7]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.6...v1.4.7
 [1.4.6]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.5...v1.4.6
 [1.4.5]: https://github.com/heyvaldemar/modernuo-docker/compare/v1.4.4...v1.4.5
