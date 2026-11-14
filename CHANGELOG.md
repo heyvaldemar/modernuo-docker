@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`MODERNUO_REF` moves from `0.15.6.264` to `0.15.6.269`, and the image moves to .NET 11 with it.** ModernUO
+  0.15.6.269 builds for `net11.0` (upstream #2763), so the SDK and runtime images move from `10.0` to `11.0`. .NET
+  11.0.0 came out on 2026-11-10 as a standard-term release, supported to 2028-11-14, the same day as .NET 10. The
+  runtime image is now Ubuntu 26.04 rather than 24.04, and `libdeflate` and `libargon2` still come from its archive.
+  The other four upstream changes are fixes to threading and saving: game, timer and network state stays on the event
+  loop through a shutdown, a crash, a save and a search (#2753); every `[CommandProperty]` write goes through one guard
+  (#2754); advanced search workers only read (#2755); and a save whose preparation fails no longer wedges later saves
+  or the shutdown (#2757). No save-format change: no serialization version moved and no migration was added. The save
+  writer now leaves skipped entities out of its buffer instead of writing around them, and the index layout
+  `tools/world-census.py` reads is untouched. Custom C# has to build for `net11.0` with C# 15. MailKit moves to 5.0.0,
+  whose `SendAsync` takes a `SendRequest`, and the .NET packages move to 11.0.0.
+
 ### Fixed
 
 - **An index pushed again over the same build is no longer reported as drift.** The daily pin check compared each pin with the digest the tag's index has now and failed on any difference, so a publisher re-pushing the index over the very same images (a platform added, an attestation rewritten) turned it red for an image nobody rebuilt, and no pin would ever move to turn it green. It now also compares the linux/amd64 build under both digests, the one CI runs and proves: the same build passes with a notice naming both digests, a new build fails as drift exactly as before, and a build that cannot be read still fails.
