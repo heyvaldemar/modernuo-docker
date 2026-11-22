@@ -12,7 +12,10 @@ REPO = os.environ.get("REPO", "modernuo/ModernUO")
 PINNED = os.environ.get("PINNED_VERSION", "")
 POLL = int(os.environ.get("POLL_SECONDS", "86400"))          # daily
 STATE = "/state/last_seen"
-UA = "uowatch (connect@valdemar.ai)"
+# No address in the User-Agent: everyone who runs this template would send it
+# to GitHub and to their own webhook on every poll. The repository is the
+# contact, the way crawlers name theirs.
+UA = "uowatch (+https://github.com/heyvaldemar/modernuo-docker)"
 
 
 def latest_release():
